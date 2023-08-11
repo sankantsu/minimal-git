@@ -9,6 +9,7 @@ you can use these subcommands (with limited options)
 - hash-object
 - cat-file
 - ls-files
+- read-tree
 - write-tree
 
 ## License
