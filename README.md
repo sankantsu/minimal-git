@@ -11,7 +11,8 @@ you can use these subcommands (with limited options)
 - ls-files
 - read-tree
 - write-tree
+- update-index
 
 ## License
 
-This software is released under the MIT License, see LICENSE.txt.
+This software is released under the MIT License, see LICENSE.
