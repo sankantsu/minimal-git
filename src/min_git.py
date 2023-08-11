@@ -5,6 +5,7 @@ import cat_file
 import ls_files
 import read_tree
 import write_tree
+import update_index
 
 def main():
     import argparse
@@ -27,6 +28,8 @@ def main():
                    setup=read_tree.setup_parser,func=read_tree.read_tree)
     add_subcommand("write-tree",help="Create a tree object from the current index",
                    setup=write_tree.setup_parser,func=write_tree.write_tree)
+    add_subcommand("update-index",help="Register file contents in the working tree to the index",
+                   setup=update_index.setup_parser,func=update_index.update_index)
 
     args = parser.parse_args()
 

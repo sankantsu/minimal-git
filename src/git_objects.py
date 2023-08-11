@@ -3,18 +3,10 @@ from collections import namedtuple
 
 import paths
 import util
+from mode import object_type_from_mode
 
 class UnknownObjectTypeError(BaseException):
     pass
-
-def object_type_from_mode(mode:int):
-    S_IFGITLINK = 0o160000
-    if stat.S_ISREG(mode) or stat.S_ISLNK(mode):
-        return "blob"
-    elif stat.S_ISDIR(mode):
-        return "tree"
-    elif stat.S_IFMT(mode) == S_IFGITLINK: # submodule
-        return "commit"
 
 class ObjectMetadata:
     def __init__(self,object_type:str,content_length:int):
@@ -29,6 +21,10 @@ class GitObjectMixin:
     @property
     def type_id(self) -> str:
         return self._metadata.type
+
+    @property
+    def content_length(self) -> int:
+        return self._metadata.content_length
 
     def hash(self) -> str:
         data = self.serialize()
@@ -57,6 +53,12 @@ class Blob(GitObjectMixin):
         content_length = len(content)
         metadata = ObjectMetadata(object_type,content_length)
         return Blob(metadata,content)
+
+    @staticmethod
+    def from_path(path):
+        with open(path,"rb") as f:
+            content = f.read()
+        return Blob.from_content(content)
 
 class TreeEntry:
     def __init__(self, mode:int, name:str, sha1:str):

@@ -33,6 +33,11 @@ def find_index_file():
     index_file = pathlib.Path("index")
     return find_git_root() / index_file
 
+def get_cwd_relative():
+    repository_root = find_repository_root()
+    cwd = pathlib.Path.cwd()
+    return cwd.relative_to(repository_root)
+
 # sha1 object path
 
 class SHA1PrefixTooShortError(BaseException):

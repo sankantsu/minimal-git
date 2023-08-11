@@ -1,8 +1,13 @@
+import stat
 import pathlib
 
 import paths
 from util import hash_content
-from git_objects import TreeEntry, Tree, load_object
+from mode import normalize_mode
+from git_objects import (
+        Blob, TreeEntry, Tree,
+        load_object,
+        )
 
 class IndexFormatError(BaseException):
     pass
@@ -30,16 +35,16 @@ class IndexEntryFlags:
 class IndexEntry:
 
     def __init__(self,
-                 ctime, ctime_nsec,
-                 mtime, mtime_nsec,
+                 ctime, ctime_ns,
+                 mtime, mtime_ns,
                  dev, ino, mode,
                  uid, gid, file_size,
                  sha1, flags, file_name,
                  ):
         self.ctime = ctime
-        self.ctime_nsec = ctime_nsec
+        self.ctime_ns = ctime_ns
         self.mtime = mtime
-        self.mtime_nsec = mtime_nsec
+        self.mtime_ns = mtime_ns
         self.dev = dev
         self.ino = ino
         self.mode = mode
@@ -52,11 +57,37 @@ class IndexEntry:
         self.flags = flags & ~IndexEntryFlags.name_mask
         self.file_name = file_name
 
+    def update(self):
+        print(f"update {self.file_name}")
+        def compare_mtime(stat):
+            orig_mtime_ns = self.mtime * 10**9 + self.mtime_ns
+            return stat.st_mtime_ns > orig_mtime_ns
+        def compare_ctime(stat):
+            orig_ctime_ns = self.ctime * 10**9 + self.ctime_ns
+            return stat.st_ctime_ns > orig_ctime_ns
+        def break_ns_part(time):
+            g = 10**9
+            return time // g, time % g
+
+        file = self.file_name
+        path = paths.find_repository_root() / file
+        stat = path.lstat()
+        if compare_mtime(stat):
+            obj = Blob.from_path(path)
+            obj.write() # create new object
+            self.mtime, self.mtime_ns = break_ns_part(stat.st_mtime_ns)
+            self.sha1 = obj.hash()
+            self.file_size = obj.content_length
+        if compare_ctime(stat):
+            self.mode = normalize_mode(stat.st_mode)
+            self.ctime, self.ctime_ns = break_ns_part(stat.st_ctime_ns)
+        self.print()
+
     def print(self,*,debug=False):
         print(f"{self.mode:06o} {self.sha1} {self.stage}\t{self.file_name}")
         if (debug):
-            print(f"  ctime: {self.ctime}:{self.ctime_nsec}")
-            print(f"  mtime: {self.mtime}:{self.mtime_nsec}")
+            print(f"  ctime: {self.ctime}:{self.ctime_ns}")
+            print(f"  mtime: {self.mtime}:{self.mtime_ns}")
             print(f"  dev: {self.dev}\tino: {self.ino}")
             print(f"  uid: {self.uid}\tgid: {self.gid}")
             print(f"  size: {self.file_size}\tflags: {self.flags:x}")
@@ -68,9 +99,9 @@ class IndexEntry:
     def to_bytes(self):
         store = b""
         store += int32_to_bytes(self.ctime)
-        store += int32_to_bytes(self.ctime_nsec)
+        store += int32_to_bytes(self.ctime_ns)
         store += int32_to_bytes(self.mtime)
-        store += int32_to_bytes(self.mtime_nsec)
+        store += int32_to_bytes(self.mtime_ns)
         store += int32_to_bytes(self.dev)
         store += int32_to_bytes(self.ino)
         store += int32_to_bytes(self.mode)
@@ -90,8 +121,8 @@ class IndexEntry:
         name = str(prefix / tree_entry.name)
         sha1 = tree_entry.sha1
         index_entry = IndexEntry(
-                ctime=0, ctime_nsec=0,
-                mtime=0, mtime_nsec=0,
+                ctime=0, ctime_ns=0,
+                mtime=0, mtime_ns=0,
                 dev=0, ino=0, mode=mode,
                 uid=0, gid=0, file_size=0,
                 sha1=sha1, flags=0,
@@ -122,8 +153,20 @@ class Index:
     def sort_entries(self):
         self._index_entries = sorted(self._index_entries,key=lambda e:e.file_name)
 
+    def check_registerd(self,file_name):
+        for e in self:
+            if e.file_name == file_name:
+                return True
+        return False
+
+    def update(self,files):
+        for e in self:
+            if e.file_name in files:
+                e.update()
+        self.write()
+
     def print(self,*,debug=False):
-        for e in self._index_entries:
+        for e in self:
             e.print(debug=debug)
 
     def version(self):
@@ -193,9 +236,9 @@ class IndexParser:
     def parse_index_entry(self):
 
         ctime = self.read_32_bit_int()
-        ctime_nsec = self.read_32_bit_int()
+        ctime_ns = self.read_32_bit_int()
         mtime = self.read_32_bit_int()
-        mtime_nsec = self.read_32_bit_int()
+        mtime_ns = self.read_32_bit_int()
         dev = self.read_32_bit_int()
         ino = self.read_32_bit_int()
         mode = self.read_32_bit_int()
@@ -208,8 +251,8 @@ class IndexParser:
         file_name = self.read_n_bytes(name_len).decode()
         self.read_n_bytes(IndexEntry.calc_padding(name_len)) # skip null padding
         index_entry = IndexEntry(
-                ctime, ctime_nsec,
-                mtime, mtime_nsec,
+                ctime, ctime_ns,
+                mtime, mtime_ns,
                 dev, ino, mode,
                 uid, gid, file_size,
                 sha1, flags, file_name,
