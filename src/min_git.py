@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+
 import hash_object
 import cat_file
 import ls_files
+import read_tree
 import write_tree
 
 def main():
@@ -21,6 +23,8 @@ def main():
                    setup=cat_file.setup_parser,func=cat_file.cat_file)
     add_subcommand("ls-files",help="Show information about files in the index and the working tree",
                    setup=ls_files.setup_parser,func=ls_files.ls_files)
+    add_subcommand("read-tree",help="Reads tree information into the index",
+                   setup=read_tree.setup_parser,func=read_tree.read_tree)
     add_subcommand("write-tree",help="Create a tree object from the current index",
                    setup=write_tree.setup_parser,func=write_tree.write_tree)
 

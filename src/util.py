@@ -1,8 +1,13 @@
+import sys
 import pathlib
 import hashlib
 import zlib
 
 import paths
+
+def die_error(*args,**kwargs):
+    print(*args,file=sys.stderr,**kwargs)
+    sys.exit(1)
 
 def hash_content(content:bytes) -> str:
     sha1 = hashlib.sha1(content).hexdigest()

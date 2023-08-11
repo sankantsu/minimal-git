@@ -60,24 +60,30 @@ class Blob(GitObjectMixin):
 
 class TreeEntry:
     def __init__(self, mode:int, name:str, sha1:str):
-        self._mode = mode
-        self._name = name
-        self._sha1 = sha1
+        self.mode = mode
+        self.name = name
+        self.sha1 = sha1
+
+    @property
+    def object_type(self):
+        return object_type_from_mode(self.mode)
 
     def __str__(self):
-        object_type = object_type_from_mode(self._mode)
-        return f"{self._mode:06o} {object_type} {self._sha1}\t{self._name}"
+        return f"{self.mode:06o} {self.object_type} {self.sha1}\t{self.name}"
 
     def serialize(self) -> bytes:
-        mode_b = f"{self._mode:o}".encode()
-        name_b = self._name.encode() + b"\x00"
-        sha1_b = bytes.fromhex(self._sha1)
+        mode_b = f"{self.mode:o}".encode()
+        name_b = self.name.encode() + b"\x00"
+        sha1_b = bytes.fromhex(self.sha1)
         return mode_b + b" " + name_b + sha1_b
 
 class Tree(GitObjectMixin):
     def __init__(self,metadata=None):
         self._metadata = metadata
         self._tree_entries = []
+
+    def __iter__(self):
+        return iter(self._tree_entries)
 
     def __str__(self):
         lst = []
