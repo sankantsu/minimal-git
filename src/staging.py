@@ -24,6 +24,10 @@ def int16_to_bytes(x):
 def int32_to_bytes(x):
     return x.to_bytes(length=4,byteorder="big")
 
+def break_ns_part(time):
+    g = 10**9
+    return time // g, time % g
+
 # only very limited support
 class IndexEntryFlags:
     name_mask_len = 12
@@ -65,9 +69,6 @@ class IndexEntry:
         def compare_ctime(stat):
             orig_ctime_ns = self.ctime * 10**9 + self.ctime_ns
             return stat.st_ctime_ns > orig_ctime_ns
-        def break_ns_part(time):
-            g = 10**9
-            return time // g, time % g
 
         file = self.file_name
         path = paths.find_repository_root() / file
@@ -129,6 +130,31 @@ class IndexEntry:
                 file_name=name
                 )
         index_entry.name_len = len(index_entry.file_name)
+        return index_entry
+
+    @staticmethod
+    def from_path(path):
+        file_name = str(path)
+        full_path = paths.find_repository_root() / path
+        # create blob
+        obj = Blob.from_path(full_path)
+        obj.write()
+        sha1 = obj.hash()
+        # get file metadata
+        stat = full_path.lstat()
+        mode = normalize_mode(stat.st_mode)
+        name_len = len(file_name)
+        flags = name_len
+        mtime, mtime_ns = break_ns_part(stat.st_mtime_ns)
+        ctime, ctime_ns = break_ns_part(stat.st_ctime_ns)
+        index_entry = IndexEntry(
+                ctime=ctime, ctime_ns=ctime_ns,
+                mtime=mtime, mtime_ns=mtime_ns,
+                dev=stat.st_dev, ino=stat.st_ino, mode=mode,
+                uid=stat.st_uid, gid=stat.st_gid, file_size=stat.st_size,
+                sha1=sha1, flags=flags,
+                file_name=file_name
+                )
         return index_entry
 
     @staticmethod
@@ -273,8 +299,12 @@ class IndexParser:
 
 def parse_index():
     index_file = paths.find_index_file()
-    with open(index_file,"rb") as f:
-        raw = f.read()
-        parser = IndexParser()
-        index = parser.parse(raw)
-        return index
+    try:
+        with open(index_file,"rb") as f:
+            raw = f.read()
+            parser = IndexParser()
+            index = parser.parse(raw)
+            return index
+    except FileNotFoundError:
+        # If there are no index file, return empty index
+        return Index()

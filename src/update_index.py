@@ -3,21 +3,26 @@ import argparse
 import pathlib
 from util import die_error
 from paths import get_cwd_relative
-from staging import Index, parse_index
+from staging import Index, IndexEntry, parse_index
 
 def setup_parser(parser):
+    parser.add_argument("--add",help="add files to index",action="store_true")
     parser.add_argument("file",nargs="*",help="files to update")
 
 def update_index(args):
     files = args.file
     cwd = get_cwd_relative()
-    files = list(map(lambda f: str(cwd / f), files))
+    paths_relative_to_root = set(map(lambda f: str(cwd / f), files))
     index = parse_index()
-    for f in files:
-        exists = index.check_registerd(f)
+    for p in paths_relative_to_root:
+        exists = index.check_registerd(p)
         if not exists:
-            die_error(f"error: {f} not registered to index. consider using --add option.")
-    index.update(files)
+            if args.add:
+                index.add_entry(IndexEntry.from_path(p))
+            else:
+                file = pathlib.Path(p).relative_to(get_cwd_relative())
+                die_error(f"error: {file} not registered to index. consider using --add option.")
+    index.update(paths_relative_to_root)
 
 def main():
     parser = argparse.ArgumentParser()
