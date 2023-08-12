@@ -3,14 +3,11 @@
 import pathlib
 from collections import namedtuple
 
+from util import get_logger
 from git_objects import TreeEntry, Tree
 from staging import Index, parse_index
 
-def get_logger():
-    import logging
-    return logging.getLogger(__name__)
-
-logger = get_logger()
+logger = get_logger(__name__)
 
 class FileTree:
     def __init__(self,path,children,existing_entry=None):

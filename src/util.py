@@ -5,6 +5,15 @@ import zlib
 
 import paths
 
+def get_logger(name=None):
+    import logging
+    toplevel = "min_git"
+    if name is None:
+        logger_name = toplevel
+    else:
+        logger_name = toplevel + "." + name
+    return logging.getLogger(logger_name)
+
 def die_error(*args,**kwargs):
     print(*args,file=sys.stderr,**kwargs)
     sys.exit(1)

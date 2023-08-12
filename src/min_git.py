@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from util import get_logger
 import hash_object
 import cat_file
 import ls_files
@@ -7,11 +8,24 @@ import read_tree
 import write_tree
 import update_index
 
+logger = get_logger()
+
+def setup_parser(parser):
+    parser.add_argument("--verbose","-v",help="more verbose output",action="store_true")
+    parser.set_defaults(subcommand=lambda _: parser.print_help())
+
+def set_verbose_logging(logger):
+    import logging
+    handler = logging.StreamHandler()
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+
 def main():
     import argparse
     parser = argparse.ArgumentParser()
+    setup_parser(parser)
+
     subparsers = parser.add_subparsers()
-    parser.set_defaults(subcommand=lambda _: parser.print_help())
 
     def add_subcommand(name,help,setup,func):
         subparser = subparsers.add_parser(name,help=help)
@@ -32,6 +46,8 @@ def main():
                    setup=update_index.setup_parser,func=update_index.update_index)
 
     args = parser.parse_args()
+    if args.verbose:
+        set_verbose_logging(logger)
 
     args.subcommand(args)
 
