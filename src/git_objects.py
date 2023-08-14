@@ -1,9 +1,11 @@
+import time
 import stat
 from collections import namedtuple
 
 import paths
 import util
 from mode import object_type_from_mode
+from config import get_config
 
 class UnknownObjectTypeError(BaseException):
     pass
@@ -123,7 +125,7 @@ class Commit(GitObjectMixin):
         s = ""
         s += f"tree {self._tree}\n"
         for parent in self._parents:
-            s += f"parent {self._tree}\n"
+            s += f"parent {parent}\n"
         def format_author(author):
             return f"{author.name} <{author.email}> {author.unix_time} {author.time_zone}"
         s += f"author {format_author(self._author)}\n"
@@ -131,6 +133,37 @@ class Commit(GitObjectMixin):
         s += "\n"
         s += self._commit_message
         return s
+
+    def update_metadata(self):
+        content_length = len(str(self))
+        self._metadata = ObjectMetadata("commit",content_length)
+
+    def serialize(self):
+        self.update_metadata()
+        header = self._metadata.make_header()
+        content = str(self).encode()
+        return header + content
+
+    @staticmethod
+    def from_tree(tree,parents,commit_message:str):
+        metadata = None
+        parents = list(map(paths.find_object, parents))
+        author = get_config("user","name")
+        email = get_config("user","email")
+        commit_time = int(time.time())
+        time_zone = time.strftime("%z")
+        author_info = AuthorInfo(author,email,commit_time,time_zone)
+        committer_info = author_info
+        commit_obj = Commit(
+                metadata,
+                tree,
+                parents,
+                author_info,
+                committer_info,
+                commit_message
+                )
+        commit_obj.update_metadata()
+        return commit_obj
 
 class ObjectParser:
 
