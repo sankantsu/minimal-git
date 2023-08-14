@@ -7,17 +7,20 @@ import util
 from mode import object_type_from_mode
 from config import get_config
 
+
 class UnknownObjectTypeError(BaseException):
     pass
 
+
 class ObjectMetadata:
-    def __init__(self,object_type:str,content_length:int):
+    def __init__(self, object_type: str, content_length: int):
         self.type = object_type
         self.content_length = content_length
 
     def make_header(self) -> bytes:
         header = self.type + " " + str(self.content_length) + "\0"
         return header.encode()
+
 
 class GitObjectMixin:
     @property
@@ -36,8 +39,9 @@ class GitObjectMixin:
         data = self.serialize()
         util.store_raw_content(data)
 
+
 class Blob(GitObjectMixin):
-    def __init__(self,metadata:ObjectMetadata,content:bytes):
+    def __init__(self, metadata: ObjectMetadata, content: bytes):
         self._metadata = metadata
         self._content = content
 
@@ -50,20 +54,21 @@ class Blob(GitObjectMixin):
         return data
 
     @staticmethod
-    def from_content(content:bytes):
+    def from_content(content: bytes):
         object_type = "blob"
         content_length = len(content)
-        metadata = ObjectMetadata(object_type,content_length)
-        return Blob(metadata,content)
+        metadata = ObjectMetadata(object_type, content_length)
+        return Blob(metadata, content)
 
     @staticmethod
     def from_path(path):
-        with open(path,"rb") as f:
+        with open(path, "rb") as f:
             content = f.read()
         return Blob.from_content(content)
 
+
 class TreeEntry:
-    def __init__(self, mode:int, name:str, sha1:str):
+    def __init__(self, mode: int, name: str, sha1: str):
         self.mode = mode
         self.name = name
         self.sha1 = sha1
@@ -81,8 +86,9 @@ class TreeEntry:
         sha1_b = bytes.fromhex(self.sha1)
         return mode_b + b" " + name_b + sha1_b
 
+
 class Tree(GitObjectMixin):
-    def __init__(self,metadata=None):
+    def __init__(self, metadata=None):
         self._metadata = metadata
         self._tree_entries = []
 
@@ -101,19 +107,23 @@ class Tree(GitObjectMixin):
             data += e.serialize()
         length = len(data)
         if self._metadata:
-            assert(self._metadata.content_length == length)
+            assert self._metadata.content_length == length
         else:
-            self._metadata = ObjectMetadata("tree",length)
+            self._metadata = ObjectMetadata("tree", length)
         header = self._metadata.make_header()
         return header + data
 
-    def add_entry(self,tree_entry):
+    def add_entry(self, tree_entry):
         self._tree_entries.append(tree_entry)
 
-AuthorInfo = namedtuple("AuthorInfo", ["name","email","unix_time","time_zone"])
+
+AuthorInfo = namedtuple("AuthorInfo", ["name", "email", "unix_time", "time_zone"])
+
 
 class Commit(GitObjectMixin):
-    def __init__(self,metadata,tree,parents,author_info,committer_info,commit_message):
+    def __init__(
+        self, metadata, tree, parents, author_info, committer_info, commit_message
+    ):
         self._metadata = metadata
         self._tree = tree
         self._parents = parents
@@ -126,8 +136,12 @@ class Commit(GitObjectMixin):
         s += f"tree {self._tree}\n"
         for parent in self._parents:
             s += f"parent {parent}\n"
+
         def format_author(author):
-            return f"{author.name} <{author.email}> {author.unix_time} {author.time_zone}"
+            return (
+                f"{author.name} <{author.email}> {author.unix_time} {author.time_zone}"
+            )
+
         s += f"author {format_author(self._author)}\n"
         s += f"committer {format_author(self._committer)}\n"
         s += "\n"
@@ -136,7 +150,7 @@ class Commit(GitObjectMixin):
 
     def update_metadata(self):
         content_length = len(str(self))
-        self._metadata = ObjectMetadata("commit",content_length)
+        self._metadata = ObjectMetadata("commit", content_length)
 
     def serialize(self):
         self.update_metadata()
@@ -145,48 +159,43 @@ class Commit(GitObjectMixin):
         return header + content
 
     @staticmethod
-    def from_tree(tree,parents,commit_message:str):
+    def from_tree(tree, parents, commit_message: str):
         metadata = None
         parents = list(map(paths.find_object, parents))
-        author = get_config("user","name")
-        email = get_config("user","email")
+        author = get_config("user", "name")
+        email = get_config("user", "email")
         commit_time = int(time.time())
         time_zone = time.strftime("%z")
-        author_info = AuthorInfo(author,email,commit_time,time_zone)
+        author_info = AuthorInfo(author, email, commit_time, time_zone)
         committer_info = author_info
         commit_obj = Commit(
-                metadata,
-                tree,
-                parents,
-                author_info,
-                committer_info,
-                commit_message
-                )
+            metadata, tree, parents, author_info, committer_info, commit_message
+        )
         commit_obj.update_metadata()
         return commit_obj
 
-class ObjectParser:
 
-    def find_char(self,char:bytes):
+class ObjectParser:
+    def find_char(self, char: bytes):
         """find first occurence of char after current head position"""
-        assert(len(char) == 1)
-        pos = self._data.find(char,self._head)
+        assert len(char) == 1
+        pos = self._data.find(char, self._head)
         return pos
 
-    def read_until(self,char:bytes,*,discard=True):
+    def read_until(self, char: bytes, *, discard=True):
         pos = self.find_char(char)
-        sub = self._data[self._head:pos]
+        sub = self._data[self._head : pos]
         if discard:
             self._head = pos + 1
         return sub
 
-    def read_n_bytes(self,n:int):
-        sub = self._data[self._head:self._head + n]
+    def read_n_bytes(self, n: int):
+        sub = self._data[self._head : self._head + n]
         self._head += n
         return sub
 
     def read_all(self):
-        sub = self._data[self._head:]
+        sub = self._data[self._head :]
         self._head = len(self._data)
         return sub
 
@@ -195,7 +204,7 @@ class ObjectParser:
 
     def check_type(self) -> str:
         types = ["blob", "tree", "commit"]
-        assert(self._head == 0)
+        assert self._head == 0
         object_type = self.read_until(b" ").decode()
         if object_type in types:
             return object_type
@@ -205,7 +214,7 @@ class ObjectParser:
     def check_content_length(self):
         content_length = int(self.read_until(b"\x00"))
         # check remaining content length
-        assert(len(self._data) == self._head + content_length)
+        assert len(self._data) == self._head + content_length
         return content_length
 
     def parse_metadata(self):
@@ -214,86 +223,80 @@ class ObjectParser:
         # check content length
         content_length = self.check_content_length()
         # make metadata
-        metadata = ObjectMetadata(object_type,content_length)
+        metadata = ObjectMetadata(object_type, content_length)
         return metadata
 
     def parse_tree_entry(self):
         # read file mode
-        mode = int(self.read_until(b" "),base=8)
+        mode = int(self.read_until(b" "), base=8)
         # read filename
         filename = self.read_until(b"\x00").decode()
         # read sha1
         sha1_length = 20
         sha1 = self.read_n_bytes(sha1_length).hex()
-        return TreeEntry(mode,filename,sha1)
+        return TreeEntry(mode, filename, sha1)
 
-    def parse_tree(self,metadata):
+    def parse_tree(self, metadata):
         tree = Tree(metadata)
-        while(not self.eof()):
+        while not self.eof():
             entry = self.parse_tree_entry()
             tree.add_entry(entry)
         return tree
 
-    def parse_commit(self,metadata):
-
-        def skip_char(char:bytes):
-            assert(len(char) == 1)
-            assert(self._data.find(char,self._head) == self._head)
+    def parse_commit(self, metadata):
+        def skip_char(char: bytes):
+            assert len(char) == 1
+            assert self._data.find(char, self._head) == self._head
             self._head += 1
-            
+
         def check_entry_name(name):
             entry_name = self.read_until(b" ").decode()
-            if (entry_name == name):
+            if entry_name == name:
                 return True
             else:
-                self._head -= (len(entry_name) + 1) # undo
+                self._head -= len(entry_name) + 1  # undo
                 return False
 
         def parse_author():
-            author = self.read_until(b"<")[:-1].decode() # strip trailing space
+            author = self.read_until(b"<")[:-1].decode()  # strip trailing space
             email = self.read_until(b">").decode()
             skip_char(b" ")
             unix_time = int(self.read_until(b" "))
             time_zone = self.read_until(b"\n").decode()
-            author_info = AuthorInfo(author,email,unix_time,time_zone)
+            author_info = AuthorInfo(author, email, unix_time, time_zone)
             return author_info
 
         # parse tree entry
-        assert(check_entry_name("tree"))
+        assert check_entry_name("tree")
         tree = self.read_until(b"\n").decode()
         # parse parents
         parents = []
-        while (check_entry_name("parent")):
+        while check_entry_name("parent"):
             parent = self.read_until(b"\n").decode()
             parents.append(parent)
         # parse author/committer info
-        assert(check_entry_name("author"))
+        assert check_entry_name("author")
         author_info = parse_author()
-        assert(check_entry_name("committer"))
+        assert check_entry_name("committer")
         committer_info = parse_author()
         # parse commit_message
         skip_char(b"\n")
         commit_message = self.read_all().decode()
         # make commit object
         commit = Commit(
-                metadata,
-                tree,
-                parents,
-                author_info,
-                committer_info,
-                commit_message
-                )
+            metadata, tree, parents, author_info, committer_info, commit_message
+        )
         return commit
 
-    def parse(self,raw_content:bytes,*,metadata_only=False):
+    def parse(self, raw_content: bytes, *, metadata_only=False):
         self._data = raw_content
         self._head = 0
         metadata = self.parse_metadata()
-        if (metadata_only):
+        if metadata_only:
             return metadata
         if metadata.type == "blob":
             content = self.read_all()
-            return Blob(metadata,content)
+            return Blob(metadata, content)
         elif metadata.type == "tree":
             tree = self.parse_tree(metadata)
             return tree
@@ -303,10 +306,12 @@ class ObjectParser:
         else:
             raise UnknownObjectTypeError
 
-def parse_object(raw_content:bytes,**kwargs):
-    return ObjectParser().parse(raw_content,**kwargs)
 
-def load_object(sha1:str):
+def parse_object(raw_content: bytes, **kwargs):
+    return ObjectParser().parse(raw_content, **kwargs)
+
+
+def load_object(sha1: str):
     full_sha1 = paths.find_object(sha1)
     raw = util.load_raw_content(full_sha1)
     obj = parse_object(raw)

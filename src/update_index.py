@@ -5,9 +5,11 @@ from util import die_error
 from paths import get_cwd_relative
 from staging import Index, IndexEntry, parse_index
 
+
 def setup_parser(parser):
-    parser.add_argument("--add",help="add files to index",action="store_true")
-    parser.add_argument("file",nargs="*",help="files to update")
+    parser.add_argument("--add", help="add files to index", action="store_true")
+    parser.add_argument("file", nargs="*", help="files to update")
+
 
 def update_index(args):
     files = args.file
@@ -21,14 +23,18 @@ def update_index(args):
                 index.add_entry(IndexEntry.from_path(p))
             else:
                 file = pathlib.Path(p).relative_to(get_cwd_relative())
-                die_error(f"error: {file} not registered to index. consider using --add option.")
+                die_error(
+                    f"error: {file} not registered to index. consider using --add option."
+                )
     index.update(paths_relative_to_root)
+
 
 def main():
     parser = argparse.ArgumentParser()
     setup_parser(parser)
     args = parser.parse_args()
     update_index(args)
+
 
 if __name__ == "__main__":
     main()
