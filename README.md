@@ -2,7 +2,18 @@
 
 Python implementation of very small subset of Git
 
-## Current status
+## Install
+
+```
+git clone https://github.com/sankantsu/minimal-git.git
+pip3 install ./minimal-git
+```
+
+## Usage
+
+```
+min-git <subcommand> <args of subcommand>...
+```
 
 you can use these subcommands (with limited options)
 
@@ -12,6 +23,7 @@ you can use these subcommands (with limited options)
 - read-tree
 - write-tree
 - update-index
+- commit-tree
 
 ## License
 
