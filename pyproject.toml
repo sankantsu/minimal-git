@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "minimal_git"
+version = "0.0.1"
+authors = [
+  { name="Godai Takashina", email="godai.takashina@gmail.com" },
+]
+description = "Python implementation of very small subset of Git"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/sankantsu/minimal-git"
+
+[project.scripts]
+min-git = "minimal_git.min_git:main"

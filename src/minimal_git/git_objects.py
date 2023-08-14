@@ -1,11 +1,10 @@
 import time
-import stat
 from collections import namedtuple
 
-import paths
-import util
-from mode import object_type_from_mode
-from config import get_config
+from . import paths
+from . import util
+from .mode import object_type_from_mode
+from .config import get_config
 
 
 class UnknownObjectTypeError(BaseException):

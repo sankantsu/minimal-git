@@ -1,6 +1,6 @@
 import argparse
 
-import staging
+from .staging import parse_index
 
 
 def setup_parser(parser):
@@ -8,7 +8,7 @@ def setup_parser(parser):
 
 
 def ls_files(args):
-    index = staging.parse_index()
+    index = parse_index()
     index.print(debug=args.debug)
 
 

@@ -1,8 +1,8 @@
 import argparse
 
-from util import die_error
-from git_objects import load_object
-from staging import Index
+from .util import die_error
+from .git_objects import load_object
+from .staging import Index
 
 
 def setup_parser(parser):

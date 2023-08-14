@@ -4,7 +4,7 @@ import os
 import pathlib
 from configparser import ConfigParser
 
-import paths
+from . import paths
 
 
 def get_config(section, key):

@@ -1,10 +1,10 @@
 import stat
 import pathlib
 
-import paths
-from util import get_logger, hash_content
-from mode import normalize_mode
-from git_objects import (
+from . import paths
+from .util import get_logger, hash_content
+from .mode import normalize_mode
+from .git_objects import (
     Blob,
     TreeEntry,
     Tree,

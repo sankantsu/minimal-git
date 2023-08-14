@@ -1,7 +1,7 @@
 import argparse
 
-from staging import parse_index
-from index_to_tree import index_to_file_tree
+from .staging import parse_index
+from .index_to_tree import index_to_file_tree
 
 
 def setup_parser(parser):

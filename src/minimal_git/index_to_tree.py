@@ -1,11 +1,10 @@
 # make file tree from plain path-names
 
 import pathlib
-from collections import namedtuple
 
-from util import get_logger
-from git_objects import TreeEntry, Tree
-from staging import Index, parse_index
+from .util import get_logger
+from .git_objects import TreeEntry, Tree
+from .staging import Index
 
 logger = get_logger(__name__)
 

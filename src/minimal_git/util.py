@@ -3,7 +3,7 @@ import pathlib
 import hashlib
 import zlib
 
-import paths
+from . import paths
 
 
 def get_logger(name=None):

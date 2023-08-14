@@ -1,6 +1,6 @@
 import argparse
 
-from git_objects import load_object
+from .git_objects import load_object
 
 
 def setup_parser(parser):

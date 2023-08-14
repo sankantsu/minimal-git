@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-
-from util import get_logger
-import hash_object
-import cat_file
-import ls_files
-import read_tree
-import write_tree
-import update_index
-import commit_tree
+from .util import get_logger
+from . import hash_object
+from . import cat_file
+from . import ls_files
+from . import read_tree
+from . import write_tree
+from . import update_index
+from . import commit_tree
 
 logger = get_logger()
 

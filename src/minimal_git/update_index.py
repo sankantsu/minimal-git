@@ -1,9 +1,9 @@
 import argparse
-
 import pathlib
-from util import die_error
-from paths import get_cwd_relative
-from staging import Index, IndexEntry, parse_index
+
+from .util import die_error
+from .paths import get_cwd_relative
+from .staging import IndexEntry, parse_index
 
 
 def setup_parser(parser):

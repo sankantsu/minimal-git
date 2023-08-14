@@ -1,6 +1,6 @@
 import argparse
 
-from git_objects import Blob
+from .git_objects import Blob
 
 
 def setup_parser(parser):

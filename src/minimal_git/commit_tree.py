@@ -1,7 +1,7 @@
 import argparse
 
-from paths import find_object
-from git_objects import Commit
+from .paths import find_object
+from .git_objects import Commit
 
 
 def setup_parser(parser):
