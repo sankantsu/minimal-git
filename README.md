@@ -6,7 +6,7 @@ Python implementation of very small subset of Git
 
 ```
 git clone https://github.com/sankantsu/minimal-git.git
-pip3 install ./minimal-git
+pip install ./minimal-git
 ```
 
 ## Usage
