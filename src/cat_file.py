@@ -13,7 +13,7 @@ def cat_file(args):
     if args.t:
         print(obj.type_id)
     if args.p:
-        print(obj)
+        print(obj,end="")
 
 def main():
     parser = argparse.ArgumentParser()
