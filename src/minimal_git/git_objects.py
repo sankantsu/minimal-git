@@ -22,42 +22,38 @@ class ObjectMetadata:
 
 
 class GitObjectMixin:
-    @property
-    def type_id(self) -> str:
-        return self._metadata.type
-
-    @property
-    def content_length(self) -> int:
-        return self._metadata.content_length
+    def make_store(self):
+        data = self.serialize()
+        metadata = ObjectMetadata(self.type_id, len(data))
+        header = metadata.make_header()
+        return header + data
 
     def hash(self) -> str:
-        data = self.serialize()
-        return util.hash_content(data)
+        store = self.make_store()
+        return util.hash_content(store)
 
     def write(self):
-        data = self.serialize()
-        util.store_raw_content(data)
+        store = self.make_store()
+        util.store_raw_content(store)
 
 
 class Blob(GitObjectMixin):
-    def __init__(self, metadata: ObjectMetadata, content: bytes):
-        self._metadata = metadata
+    def __init__(self, content: bytes):
         self._content = content
 
     def __str__(self):
         return self._content.decode()
 
+    @property
+    def type_id(self):
+        return "blob"
+
     def serialize(self) -> bytes:
-        header = self._metadata.make_header()
-        data = header + self._content
-        return data
+        return self._content
 
     @staticmethod
     def from_content(content: bytes):
-        object_type = "blob"
-        content_length = len(content)
-        metadata = ObjectMetadata(object_type, content_length)
-        return Blob(metadata, content)
+        return Blob(content)
 
     @staticmethod
     def from_path(path):
@@ -87,30 +83,27 @@ class TreeEntry:
 
 
 class Tree(GitObjectMixin):
-    def __init__(self, metadata=None):
-        self._metadata = metadata
+    def __init__(self):
         self._tree_entries = []
 
     def __iter__(self):
         return iter(self._tree_entries)
 
+    @property
+    def type_id(self):
+        return "tree"
+
     def __str__(self):
         lst = []
-        for e in self._tree_entries:
+        for e in self:
             lst.append(str(e))
         return "\n".join(lst)
 
     def serialize(self):
         data = b""
-        for e in self._tree_entries:
+        for e in self:
             data += e.serialize()
-        length = len(data)
-        if self._metadata:
-            assert self._metadata.content_length == length
-        else:
-            self._metadata = ObjectMetadata("tree", length)
-        header = self._metadata.make_header()
-        return header + data
+        return data
 
     def add_entry(self, tree_entry):
         self._tree_entries.append(tree_entry)
@@ -121,9 +114,8 @@ AuthorInfo = namedtuple("AuthorInfo", ["name", "email", "unix_time", "time_zone"
 
 class Commit(GitObjectMixin):
     def __init__(
-        self, metadata, tree, parents, author_info, committer_info, commit_message
+        self, tree, parents, author_info, committer_info, commit_message
     ):
-        self._metadata = metadata
         self._tree = tree
         self._parents = parents
         self._author = author_info
@@ -147,19 +139,16 @@ class Commit(GitObjectMixin):
         s += self._commit_message
         return s
 
-    def update_metadata(self):
-        content_length = len(str(self))
-        self._metadata = ObjectMetadata("commit", content_length)
+    @property
+    def type_id(self):
+        return "commit"
 
     def serialize(self):
-        self.update_metadata()
-        header = self._metadata.make_header()
         content = str(self).encode()
-        return header + content
+        return content
 
     @staticmethod
     def from_tree(tree, parents, commit_message: str):
-        metadata = None
         parents = list(map(paths.find_object, parents))
         author = get_config("user", "name")
         email = get_config("user", "email")
@@ -168,9 +157,8 @@ class Commit(GitObjectMixin):
         author_info = AuthorInfo(author, email, commit_time, time_zone)
         committer_info = author_info
         commit_obj = Commit(
-            metadata, tree, parents, author_info, committer_info, commit_message
+            tree, parents, author_info, committer_info, commit_message
         )
-        commit_obj.update_metadata()
         return commit_obj
 
 
@@ -235,14 +223,14 @@ class ObjectParser:
         sha1 = self.read_n_bytes(sha1_length).hex()
         return TreeEntry(mode, filename, sha1)
 
-    def parse_tree(self, metadata):
-        tree = Tree(metadata)
+    def parse_tree(self):
+        tree = Tree()
         while not self.eof():
             entry = self.parse_tree_entry()
             tree.add_entry(entry)
         return tree
 
-    def parse_commit(self, metadata):
+    def parse_commit(self):
         def skip_char(char: bytes):
             assert len(char) == 1
             assert self._data.find(char, self._head) == self._head
@@ -283,7 +271,7 @@ class ObjectParser:
         commit_message = self.read_all().decode()
         # make commit object
         commit = Commit(
-            metadata, tree, parents, author_info, committer_info, commit_message
+            tree, parents, author_info, committer_info, commit_message
         )
         return commit
 
@@ -293,14 +281,16 @@ class ObjectParser:
         metadata = self.parse_metadata()
         if metadata_only:
             return metadata
+
+        assert metadata.content_length == (len(self._data) - self._head)
         if metadata.type == "blob":
             content = self.read_all()
-            return Blob(metadata, content)
+            return Blob(content)
         elif metadata.type == "tree":
-            tree = self.parse_tree(metadata)
+            tree = self.parse_tree()
             return tree
         elif metadata.type == "commit":
-            commit = self.parse_commit(metadata)
+            commit = self.parse_commit()
             return commit
         else:
             raise UnknownObjectTypeError

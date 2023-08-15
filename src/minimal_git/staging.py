@@ -99,14 +99,14 @@ class IndexEntry:
         path = paths.find_repository_root() / file
         stat = path.lstat()
         if compare_mtime(stat):
-            logger.debug(f"detected change of mtime")
+            logger.debug("detected change of mtime")
             obj = Blob.from_path(path)
             obj.write()  # create new object
             self.mtime, self.mtime_ns = break_ns_part(stat.st_mtime_ns)
             self.sha1 = obj.hash()
-            self.file_size = obj.content_length
+            self.file_size = stat.st_size
         if compare_ctime(stat):
-            logger.debug(f"detected change of ctime")
+            logger.debug("detected change of ctime")
             self.mode = normalize_mode(stat.st_mode)
             self.ctime, self.ctime_ns = break_ns_part(stat.st_ctime_ns)
         logger.debug(str(self))
